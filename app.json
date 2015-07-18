@@ -1,0 +1,7 @@
+{
+  "name": "Midoin API",
+  "description": "Midoin test",
+  "repository": "https://github.com/jtanori/alderaan",
+  "logo": "http://www.jound.mx/images/icon-white.png",
+  "keywords": ["cashregister", "express", "static", "node"]
+}
