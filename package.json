@@ -1,5 +1,5 @@
 {
-  "name": "jound-manager",
+  "name": "cashregister",
   "version": "0.0.1",
   "dependencies": {
     "MD5": "^1.2.1",
@@ -21,6 +21,7 @@
     "multer": "^0.1.7",
     "newrelic": "^1.16.4",
     "node-localstorage": "^0.3.6",
+    "node-soap": "^1.0.0",
     "underscore.string": "^3.0.2"
   },
   "devDependencies": {

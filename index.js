@@ -14,6 +14,7 @@ var MobileDetect = require('mobile-detect');
 var helmet = require('helmet');
 var CryptoJS = require('cryptojs');
 var https = require('https');
+var soap = require('node-soap');
 
 //===============EXPRESS================
 // Configure Express
@@ -87,10 +88,10 @@ CashRegister.use(logRequest);
 
 CashRegister.post('/', function(req, res) {
 
-    var body = request.params.body;
+    var body = req.body || '';
 
     if(!body){
-        res.status(400).json({status: 'error'});
+        res.status(400).json({status: 'error', error: 'No body passd'});
     }
 
     var options = {
@@ -104,16 +105,18 @@ CashRegister.post('/', function(req, res) {
         }
     };
 
-    http.request(options, function(res){
+    var request = https.request(options, function(r){
 
-        res.on('data', function(d){
-            res.status(200).json({status: 'success', data: JSON.stringify(d)});
+        console.log(r);
+        
+        r.on('data', function(d){
+            res.status(200).json({status: 'success', data: d});
         });
     });
 
-    req.end();
+    request.end();
 
-    req.on('error', function(e){
+    request.on('error', function(e){
         res.status(400).json({status: 'error', error: e});
     });
 });
