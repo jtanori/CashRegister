@@ -1,6 +1,9 @@
 {
   "name": "cashregister",
   "version": "0.0.1",
+  "engines": {
+    "node": "0.12.x"
+  },
   "dependencies": {
     "MD5": "^1.2.1",
     "applinks-metatag": "0.0.2",
