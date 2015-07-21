@@ -95,8 +95,7 @@ CashRegister.post('/', function(req, res) {
         path: '/soap/merchant/cashregister-2?wsdl',
         method: 'GET',
         headers: {
-            'Content-Type': 'application/json;charset=utf-8',
-            'Content-Length': body.length
+            'Content-Type': 'application/json;charset=utf-8'
         }
     };
 
