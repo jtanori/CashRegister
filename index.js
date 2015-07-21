@@ -89,35 +89,27 @@ CashRegister.use(logRequest);
 CashRegister.post('/', function(req, res) {
 
     var body = req.body || '';
-
-    if(!body){
-        res.status(400).json({status: 'error', error: 'No body passd'});
-    }
-
     var options = {
         hostname: 'extdev.seqr.com',
         port: 443,
         path: '/soap/merchant/cashregister-2?wsdl',
-        method: 'POST',
+        method: 'GET',
         headers: {
             'Content-Type': 'application/json;charset=utf-8',
             'Content-Length': body.length
         }
     };
 
-    var request = https.request(options, function(r){
-
-        console.log(r);
-        
-        r.on('data', function(d){
-            res.status(200).json({status: 'success', data: d});
+    https.get(options, function (resp) {
+        var body = '';
+        resp.on('data', function (chunk) {
+            body += chunk;
         });
-    });
 
-    request.end();
-
-    request.on('error', function(e){
-        res.status(400).json({status: 'error', error: e});
+        resp.on('end', function () {
+            console.log('Request ended.');
+            res.end('Hello :)');
+        });
     });
 });
 
