@@ -13,8 +13,9 @@ var ejs = require('ejs-locals');
 var MobileDetect = require('mobile-detect');
 var helmet = require('helmet');
 var CryptoJS = require('cryptojs');
-var https = require('https');
-var soap = require('node-soap');
+var http = require('https');
+var parseString = require('xml2js').parseString;
+var parse = require('xml2json');
 
 //===============EXPRESS================
 // Configure Express
@@ -87,29 +88,66 @@ var CashRegister = express.Router();
 CashRegister.use(logRequest);
 
 CashRegister.post('/', function(req, res) {
+    //Check attrs
+    if(!req.body.clientReference || !req.body.invoiceReference){
+        res.status(400).json({status: 'error', message: 'payementstatus requires clientReference and invoiceReference arguments.'});
+    }
 
-    var body = req.body || '';
+    var clientReference = req.body.clientReference;
+    var invoiceReference = req.body.invoiceReference;
+    var envelope = _.template("<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ext=\"http://external.interfaces.ers.seamless.com/\">\n"
+                               + "<soapenv:Body>\n"
+                               + "<ext:getPaymentStatus>\n"
+                               + "<context>\n"
+                               + "<channel>slickappsWS</channel>\n"
+                               + "<clientReference><%= clientReference %></clientReference>\n"
+                               + "<initiatorPrincipalId>\n"
+                               + "<id>slickapps_terminal</id>\n"
+                               + "<userId>9900</userId>\n"
+                               + "<type>TERMINALID</type>\n"
+                               + "</initiatorPrincipalId>\n"
+                               + "<password>784536</password>"
+                               + "</context>\n"
+                               + "<invoiceReference><%= invoiceReference %></invoiceReference>\n"
+                               + "</ext:getPaymentStatus>\n"
+                               + "</soapenv:Body>\n"
+                               + "</soapenv:Envelope>\n")({clientReference: clientReference, invoiceReference: invoiceReference});
+    
     var options = {
         hostname: 'extdev.seqr.com',
         port: 443,
         path: '/soap/merchant/cashregister-2?wsdl',
-        method: 'GET',
+        method: 'POST',
         headers: {
-            'Content-Type': 'application/json;charset=utf-8'
-        }
+            'Content-Type': 'text/xml',
+            'Content-Length': envelope.length
+        },
+        keepAliveMsecs: '2000',
+        keepAlive: true
     };
 
-    https.get(options, function (resp) {
+    var request = http.request(options, function (r) {
         var body = '';
-        resp.on('data', function (chunk) {
+
+        r.on('data', function (chunk) {
             body += chunk;
         });
 
-        resp.on('end', function () {
-            console.log('Request ended.');
-            res.end('Hello :)');
+        r.on('end', function () {
+            var parsed = parse.toJson(body, {object: true});
+            var status;
+            
+            try{
+                status = parsed["soap:Envelope"]["soap:Body"]["ns2:getPaymentStatusResponse"]["return"]["status"];
+                res.status(200).json({status: 'success', paymentStatus: status});
+            }catch(e){
+                res.status(400).json({status: 'error', message: e.message});
+            }
         });
     });
+
+    request.write(envelope);
+    request.end();
 });
 
 //Use credit OLD
