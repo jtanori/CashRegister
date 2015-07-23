@@ -16,6 +16,16 @@ var CryptoJS = require('cryptojs');
 var http = require('https');
 var parseString = require('xml2js').parseString;
 var parse = require('xml2json');
+var events = require("events");
+
+//Create an event browdcaster for the CashRegister transactions
+var Cash = (function () {
+    var eventEmitter = new events.EventEmitter();
+
+    return {
+        EventEmitter:eventEmitter  // The event broadcaster
+    };
+})();
 
 //===============EXPRESS================
 // Configure Express
@@ -125,33 +135,65 @@ CashRegister.post('/', function(req, res) {
         keepAliveMsecs: '2000',
         keepAlive: true
     };
+    //Track start time
+    var request;
+    var initTime = (new Date())*1;
+    //Create an interval
+    var interval = setInterval(function() {
+        request = http.request(options, function (r) {
+            console.log('request initiated');
+            var body = '';
+            var endTime;
 
-    var request = http.request(options, function (r) {
-        var body = '';
+            //Concatenate data
+            r.on('data', function (chunk) {
+                body += chunk;
+            });
 
-        r.on('data', function (chunk) {
-            body += chunk;
+            r.on('end', function () {
+                var parsed = parse.toJson(body, {object: true});
+                var status;
+                
+                try{
+                    //Try checking status
+                    status = parsed["soap:Envelope"]["soap:Body"]["ns2:getPaymentStatusResponse"]["return"]["status"];
+
+                    switch(status){
+                    case 'PAID':
+                    case 'CANCELLED':
+                    case 'ISSUED':
+                        //Just kill it
+                        clearInterval(interval);
+                        res.status(200).json({status: 'success', paymentStatus: status});
+                        break;
+                    default:
+                        endTime = (new Date())*1;
+                        console.log('check at: ' + endTime, initTime);
+                        console.log('status', status);
+                        console.log('response', parsed);
+                        //If we have been polling for more than 3 minutes just kill the interval and response
+                        if((endTime - initTime) > 180000){
+                            clearInterval(interval);
+                            res.status(200).json({status: 'success', paymentStatus: status});
+                        }
+                    }
+                    
+                }catch(e){
+                    //IF an error happens then we can just kill it
+                    clearInterval(interval);
+                    res.json({status: 'error', message: e.message});
+                }
+            });
         });
 
-        r.on('end', function () {
-            var parsed = parse.toJson(body, {object: true});
-            var status;
-            
-            try{
-                status = parsed["soap:Envelope"]["soap:Body"]["ns2:getPaymentStatusResponse"]["return"]["status"];
-                res.status(200).json({status: 'success', paymentStatus: status});
-            }catch(e){
-                res.status(400).json({status: 'error', message: e.message});
-            }
-        });
-    });
-
-    request.write(envelope);
-    request.end();
+        request.write(envelope);
+        request.end();
+    }, 2000);
 });
 
-//Use credit OLD
+//Use CashRegister router
 app.use('/addUserCreditOLD', CashRegister);
+
 /*===============START=================*/
 app.listen(app.get('port'), function() {
     console.log("Node app is running at localhost:" + app.get('port'));
